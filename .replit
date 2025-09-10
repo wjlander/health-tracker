@@ -24,13 +24,13 @@ args = "Health Tracker"
 name = "Health Tracker"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "DATABASE_URL=postgresql://postgres:password@helium/heliumdb?sslmode=disable npx tsx server/main.ts"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
 
 [agent]
 integrations = ["javascript_database:1.0.0"]
@@ -39,8 +39,3 @@ expertMode = true
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3000
-exposeLocalhost = true
