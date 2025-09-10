@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, User, Bell, Shield, Palette, Globe, Save, Check } from 'lucide-react';
+import { Settings as SettingsIcon, User, Bell, Shield, Palette, Globe, Save, Check, Key, Database } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { updateUserPreferences } from '../lib/database';
 import { WeightUnit, TemperatureUnit } from '../lib/units';
@@ -30,6 +30,14 @@ interface UserPreferences {
   };
 }
 
+interface ApiConfiguration {
+  supabase_url: string;
+  supabase_anon_key: string;
+  fitbit_client_id: string;
+  fitbit_client_secret: string;
+  fitbit_redirect_uri: string;
+}
+
 export const Settings: React.FC = () => {
   const { currentUser, updateUser } = useAuth();
   const [preferences, setPreferences] = useState<UserPreferences>({
@@ -40,8 +48,17 @@ export const Settings: React.FC = () => {
     theme: 'light',
     language: 'en'
   });
+  const [apiConfig, setApiConfig] = useState<ApiConfiguration>({
+    supabase_url: '',
+    supabase_anon_key: '',
+    fitbit_client_id: '',
+    fitbit_client_secret: '',
+    fitbit_redirect_uri: ''
+  });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [apiSaving, setApiSaving] = useState(false);
+  const [apiSaved, setApiSaved] = useState(false);
 
   useEffect(() => {
     if (currentUser?.tracking_preferences) {
@@ -71,6 +88,26 @@ export const Settings: React.FC = () => {
         }
       });
     }
+
+    // Load API configuration from localStorage
+    const savedApiConfig = localStorage.getItem('api_configuration');
+    if (savedApiConfig) {
+      try {
+        const config = JSON.parse(savedApiConfig);
+        setApiConfig(config);
+      } catch (error) {
+        console.error('Failed to parse saved API configuration:', error);
+      }
+    } else {
+      // Initialize with current environment variables
+      setApiConfig({
+        supabase_url: import.meta.env.VITE_SUPABASE_URL || '',
+        supabase_anon_key: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+        fitbit_client_id: import.meta.env.VITE_FITBIT_CLIENT_ID || '',
+        fitbit_client_secret: import.meta.env.VITE_FITBIT_CLIENT_SECRET || '',
+        fitbit_redirect_uri: import.meta.env.VITE_FITBIT_REDIRECT_URI || ''
+      });
+    }
   }, [currentUser]);
 
   const handleSave = async () => {
@@ -98,6 +135,53 @@ export const Settings: React.FC = () => {
 
   const updatePreference = (key: keyof UserPreferences, value: any) => {
     setPreferences(prev => ({ ...prev, [key]: value }));
+  };
+
+  const updateApiConfig = (key: keyof ApiConfiguration, value: string) => {
+    setApiConfig(prev => ({ ...prev, [key]: value }));
+  };
+
+  const handleApiSave = async () => {
+    setApiSaving(true);
+    try {
+      // Save to localStorage
+      localStorage.setItem('api_configuration', JSON.stringify(apiConfig));
+      
+      // Show success state
+      setApiSaved(true);
+      setTimeout(() => setApiSaved(false), 2000);
+      
+      // Refresh the page to reinitialize API clients with new config
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error('Error saving API configuration:', error);
+    } finally {
+      setApiSaving(false);
+    }
+  };
+
+  const testConnection = async (type: 'supabase' | 'fitbit') => {
+    try {
+      if (type === 'supabase') {
+        // Test Supabase connection
+        const url = new URL(apiConfig.supabase_url);
+        const response = await fetch(`${apiConfig.supabase_url}/rest/v1/`, {
+          headers: {
+            'apikey': apiConfig.supabase_anon_key,
+            'Authorization': `Bearer ${apiConfig.supabase_anon_key}`
+          }
+        });
+        return response.ok;
+      } else if (type === 'fitbit') {
+        // For Fitbit, we can just validate the format since we can't test without full OAuth
+        return apiConfig.fitbit_client_id.length > 0 && apiConfig.fitbit_client_secret.length > 0;
+      }
+    } catch (error) {
+      return false;
+    }
+    return false;
   };
 
   const SettingCard: React.FC<{
@@ -161,6 +245,28 @@ export const Settings: React.FC = () => {
           </option>
         ))}
       </select>
+    </div>
+  );
+
+  const Input: React.FC<{
+    value: string;
+    onChange: (value: string) => void;
+    label: string;
+    type?: string;
+    placeholder?: string;
+    required?: boolean;
+  }> = ({ value, onChange, label, type = 'text', placeholder, required = false }) => (
+    <div>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+      />
     </div>
   );
 
@@ -287,6 +393,103 @@ export const Settings: React.FC = () => {
                 { value: 'de', label: 'German' }
               ]}
             />
+          </div>
+        </SettingCard>
+
+        <SettingCard
+          title="API Configuration"
+          description="Configure your Supabase and Fitbit API connection details"
+          icon={<Database className="h-5 w-5 text-blue-600" />}
+        >
+          <div className="space-y-6">
+            <div className="border-b border-gray-200 pb-4">
+              <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Database className="h-5 w-5 mr-2 text-blue-600" />
+                Supabase Configuration
+              </h4>
+              <div className="grid grid-cols-1 gap-4">
+                <Input
+                  label="Supabase URL"
+                  value={apiConfig.supabase_url}
+                  onChange={(value) => updateApiConfig('supabase_url', value)}
+                  placeholder="https://your-project.supabase.co"
+                  type="url"
+                  required
+                />
+                <Input
+                  label="Supabase Anonymous Key"
+                  value={apiConfig.supabase_anon_key}
+                  onChange={(value) => updateApiConfig('supabase_anon_key', value)}
+                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  type="password"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="border-b border-gray-200 pb-4">
+              <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Key className="h-5 w-5 mr-2 text-green-600" />
+                Fitbit API Configuration
+              </h4>
+              <div className="grid grid-cols-1 gap-4">
+                <Input
+                  label="Fitbit Client ID"
+                  value={apiConfig.fitbit_client_id}
+                  onChange={(value) => updateApiConfig('fitbit_client_id', value)}
+                  placeholder="23QLWB"
+                  required
+                />
+                <Input
+                  label="Fitbit Client Secret"
+                  value={apiConfig.fitbit_client_secret}
+                  onChange={(value) => updateApiConfig('fitbit_client_secret', value)}
+                  placeholder="Client secret from Fitbit dev console"
+                  type="password"
+                  required
+                />
+                <Input
+                  label="Fitbit Redirect URI"
+                  value={apiConfig.fitbit_redirect_uri}
+                  onChange={(value) => updateApiConfig('fitbit_redirect_uri', value)}
+                  placeholder="https://your-domain.com/fitbit/callback"
+                  type="url"
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between pt-4">
+              <div className="text-sm text-gray-600">
+                <p className="mb-2">💡 <strong>Note:</strong> Changes will require a page refresh to take effect.</p>
+                <p>🔒 Configuration is stored securely in your browser's local storage.</p>
+              </div>
+              <button
+                onClick={handleApiSave}
+                disabled={apiSaving}
+                className={`px-6 py-2 rounded-lg font-medium transition-all ${
+                  apiSaved
+                    ? 'bg-green-600 text-white'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50'
+                }`}
+              >
+                {apiSaving ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Saving...
+                  </div>
+                ) : apiSaved ? (
+                  <div className="flex items-center">
+                    <Check className="h-4 w-4 mr-2" />
+                    Saved!
+                  </div>
+                ) : (
+                  <div className="flex items-center">
+                    <Save className="h-4 w-4 mr-2" />
+                    Save API Config
+                  </div>
+                )}
+              </button>
+            </div>
           </div>
         </SettingCard>
 
