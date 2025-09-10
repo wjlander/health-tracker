@@ -19,6 +19,7 @@ import { HeartburnTracking } from './components/HeartburnTracking';
 import { ReportBuilder } from './components/ReportBuilder';
 import { WeightGoalManagement } from './components/WeightGoalManagement';
 import { NotificationsReminders } from './components/NotificationsReminders';
+import { IntegrationsManager } from './components/IntegrationsManager';
 import { useAuth } from './contexts/AuthContext';
 
 const AppContent: React.FC = () => {
@@ -83,6 +84,8 @@ const AppContent: React.FC = () => {
         return <WeightGoalManagement />;
       case 'notifications':
         return <NotificationsReminders />;
+      case 'integrations':
+        return <IntegrationsManager />;
       case 'settings':
         return <Settings />;
       case 'data-management':
@@ -123,6 +126,8 @@ const AppContent: React.FC = () => {
         return 'Weight Goals';
       case 'notifications':
         return 'Notifications';
+      case 'integrations':
+        return 'Integrations';
       case 'settings':
         return 'Settings';
       case 'data-management':
