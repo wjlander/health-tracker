@@ -4,8 +4,8 @@ modules = ["nodejs-20", "bash", "web"]
 channel = "stable-25_05"
 
 [deployment]
-deploymentTarget = "autoscale"
-run = ["npm", "run", "start"]
+deploymentTarget = "vm"
+run = ["DATABASE_URL=postgresql://postgres:password@helium/heliumdb?sslmode=disable", "npx", "tsx", "server/main.ts"]
 build = ["npm", "run", "build"]
 
 [workflows]
