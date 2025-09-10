@@ -1,0 +1,30 @@
+[Unit]
+Description=Health Tracker Application
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/health-tracker
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=10
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/health-tracker
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=health-tracker
+
+[Install]
+WantedBy=multi-user.target

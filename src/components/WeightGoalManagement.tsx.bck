@@ -1,0 +1,595 @@
+import React, { useState, useEffect } from 'react';
+import { Target, TrendingDown, TrendingUp, Minus, Plus, Calendar, Scale, CheckCircle } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useAuth } from '../contexts/AuthContext';
+import { getWeightGoals, createWeightGoal, getActiveWeightGoal, getHealthEntries, getLatestFitbitData } from '../lib/database';
+import { convertWeight, formatWeight, WeightUnit } from '../lib/units';
+import { format, differenceInDays, addDays, addWeeks } from 'date-fns';
+
+export const WeightGoalManagement: React.FC = () => {
+  const { currentUser } = useAuth();
+  const [goals, setGoals] = useState<any[]>([]);
+  const [activeGoal, setActiveGoal] = useState<any>(null);
+  const [weightHistory, setWeightHistory] = useState<any[]>([]);
+  const [chartTimeframe, setChartTimeframe] = useState<'30' | '90' | '180' | '365'>('90');
+  const [loading, setLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
+  
+  const weightUnit = (currentUser?.tracking_preferences?.weight_unit as WeightUnit) || 'lbs';
+  
+  const [formData, setFormData] = useState({
+    goal_type: 'loss' as const,
+    start_weight: 0,
+    target_weight: 0,
+    target_date: '',
+    weekly_goal: 1,
+    notes: ''
+  });
+
+  useEffect(() => {
+    if (currentUser) {
+      loadData();
+    }
+  }, [currentUser]);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      const [goalsResult, activeGoalResult, healthResult, fitbitResult] = await Promise.all([
+        getWeightGoals(currentUser!.id),
+        getActiveWeightGoal(currentUser!.id),
+        getHealthEntries(currentUser!.id, parseInt(chartTimeframe)),
+        getLatestFitbitData(currentUser!.id)
+      ]);
+      
+      if (goalsResult.error && !goalsResult.error.message?.includes('does not exist')) {
+        throw goalsResult.error;
+      }
+      
+      setGoals(goalsResult.data || []);
+      setActiveGoal(activeGoalResult.data);
+      
+      // Process weight history for chart
+      const healthData = healthResult.data || [];
+      const weightData = healthData
+        .filter(entry => entry.weight)
+        .map(entry => ({
+          date: entry.date,
+          weight: convertWeight(entry.weight, 'lbs', weightUnit),
+          formattedDate: format(new Date(entry.date), 'MMM d')
+        }))
+        .reverse(); // Show oldest to newest
+      
+      setWeightHistory(weightData);
+      
+      // Set current weight as start weight for new goals (prioritize Fitbit)
+      let currentWeight = 0;
+      if (fitbitResult?.weight?.weight) {
+        currentWeight = convertWeight(fitbitResult.weight.weight, 'lbs', weightUnit);
+      } else if (healthData.length > 0 && healthData[0].weight) {
+        currentWeight = convertWeight(healthData[0].weight, 'lbs', weightUnit);
+      }
+      
+      if (currentWeight > 0) {
+        setFormData(prev => ({ ...prev, start_weight: currentWeight }));
+      }
+      
+    } catch (error) {
+      console.error('Error loading weight goal data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate suggested target date based on weight difference and weekly goal
+  const calculateSuggestedDate = (startWeight: number, targetWeight: number, weeklyGoal: number) => {
+    const weightDifference = Math.abs(targetWeight - startWeight);
+    const weeksNeeded = Math.ceil(weightDifference / weeklyGoal);
+    return format(addWeeks(new Date(), weeksNeeded), 'yyyy-MM-dd');
+  };
+
+  // Update target date when weights or weekly goal change
+  React.useEffect(() => {
+    if (formData.start_weight > 0 && formData.target_weight > 0 && formData.weekly_goal > 0) {
+      const suggestedDate = calculateSuggestedDate(formData.start_weight, formData.target_weight, formData.weekly_goal);
+      setFormData(prev => ({ ...prev, target_date: suggestedDate }));
+    }
+  }, [formData.start_weight, formData.target_weight, formData.weekly_goal]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentUser) return;
+
+    try {
+      setLoading(true);
+      
+      // Convert weights to pounds for storage
+      const goalData = {
+        ...formData,
+        user_id: currentUser.id,
+        start_weight: convertWeight(formData.start_weight, weightUnit, 'lbs'),
+        target_weight: convertWeight(formData.target_weight, weightUnit, 'lbs')
+      };
+      
+      const { error } = await createWeightGoal(goalData);
+      if (error) throw error;
+
+      resetForm();
+      await loadData();
+    } catch (error) {
+      console.error('Error creating weight goal:', error);
+      alert('Failed to create weight goal. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      goal_type: 'loss',
+      start_weight: 0,
+      target_weight: 0,
+      target_date: format(addDays(new Date(), 90), 'yyyy-MM-dd'),
+      weekly_goal: 1,
+      notes: ''
+    });
+    setShowForm(false);
+  };
+
+  const calculateProgress = (goal: any) => {
+    if (!weightHistory.length) return { progress: 0, percentage: 0, onTrack: false };
+    
+    const currentWeight = weightHistory[weightHistory.length - 1]?.weight || goal.start_weight;
+    const startWeight = convertWeight(goal.start_weight, 'lbs', weightUnit);
+    const targetWeight = convertWeight(goal.target_weight, 'lbs', weightUnit);
+    
+    const progress = currentWeight - startWeight;
+    const totalChange = targetWeight - startWeight;
+    const percentage = Math.abs(totalChange) > 0 ? Math.abs(progress / totalChange) * 100 : 0;
+    
+    const daysElapsed = differenceInDays(new Date(), new Date(goal.start_date));
+    const expectedProgress = goal.weekly_goal * (daysElapsed / 7);
+    const onTrack = Math.abs(progress) >= Math.abs(expectedProgress) * 0.8;
+    
+    return { progress, percentage, onTrack, currentWeight, targetWeight };
+  };
+
+  const getWeeklyGoalText = () => {
+    switch (weightUnit) {
+      case 'kg':
+        return '0.5-1 kg/week';
+      case 'stones':
+        return '0.1-0.2 st/week';
+      default:
+        return '1-2 lbs/week';
+    }
+  };
+
+  const getGoalIcon = (goalType: string) => {
+    switch (goalType) {
+      case 'loss': return TrendingDown;
+      case 'gain': return TrendingUp;
+      case 'maintain': return Minus;
+      default: return Target;
+    }
+  };
+
+  const getRecommendations = (goal: any, progress: any) => {
+    const recommendations = [];
+    
+    if (!progress.onTrack) {
+      if (goal.goal_type === 'loss') {
+        recommendations.push('Consider increasing physical activity or reviewing your nutrition plan');
+        recommendations.push('Track your food intake more carefully');
+        recommendations.push('Ensure you\'re getting adequate sleep (affects metabolism)');
+      } else if (goal.goal_type === 'gain') {
+        recommendations.push('Focus on nutrient-dense, calorie-rich foods');
+        recommendations.push('Consider strength training to build muscle mass');
+        recommendations.push('Eat more frequent, smaller meals');
+      }
+    } else {
+      recommendations.push('Great progress! Keep up your current routine');
+      recommendations.push('Continue tracking to maintain momentum');
+    }
+    
+    return recommendations;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white rounded-xl shadow-sm p-6 border border-blue-100">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-3">
+            <Target className="h-6 w-6 text-purple-600" />
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Weight Goal Management</h3>
+              <p className="text-sm text-gray-600">
+                Set and track weight goals for <strong>{currentUser?.name}</strong>
+              </p>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => setShowForm(true)}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors flex items-center space-x-2"
+          >
+            <Plus className="h-4 w-4" />
+            <span>New Goal</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Active Goal Progress */}
+      {activeGoal && (
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-purple-100">
+          <h4 className="font-semibold text-gray-900 mb-4 flex items-center">
+            {React.createElement(getGoalIcon(activeGoal.goal_type), { className: "h-5 w-5 mr-2 text-purple-600" })}
+            Current Goal: {activeGoal.goal_type} Weight
+          </h4>
+          
+          {(() => {
+            const progress = calculateProgress(activeGoal);
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <h5 className="font-medium text-gray-700 mb-2">Progress</h5>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Start:</span>
+                      <span>{formatWeight(convertWeight(activeGoal.start_weight, 'lbs', weightUnit), weightUnit)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Current:</span>
+                      <span className="font-medium">{formatWeight(progress.currentWeight, weightUnit)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span>Target:</span>
+                      <span>{formatWeight(progress.targetWeight, weightUnit)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm font-medium">
+                      <span>Progress:</span>
+                      <span className={progress.progress > 0 ? 'text-green-600' : 'text-blue-600'}>
+                        {progress.progress > 0 ? '+' : ''}{formatWeight(Math.abs(progress.progress), weightUnit)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h5 className="font-medium text-gray-700 mb-2">Timeline</h5>
+                  <div className="space-y-2 text-sm">
+                    <div>Started: {format(new Date(activeGoal.start_date), 'MMM d, yyyy')}</div>
+                    {activeGoal.target_date && (
+                      <div>Target: {format(new Date(activeGoal.target_date), 'MMM d, yyyy')}</div>
+                    )}
+                    <div>Weekly Goal: {activeGoal.weekly_goal} {weightUnit}/week</div>
+                    <div className={`font-medium ${progress.onTrack ? 'text-green-600' : 'text-yellow-600'}`}>
+                      {progress.onTrack ? '✓ On track' : '⚠ Behind schedule'}
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h5 className="font-medium text-gray-700 mb-2">Goal Progress</h5>
+                  <div className="space-y-2">
+                    <div className="w-full bg-gray-200 rounded-full h-4">
+                      <div 
+                        className={`h-4 rounded-full transition-all duration-300 ${
+                          progress.onTrack ? 'bg-green-500' : 'bg-yellow-500'
+                        }`}
+                        style={{ width: `${Math.min(100, progress.percentage)}%` }}
+                      />
+                    </div>
+                    <div className="text-center text-sm font-medium">
+                      {Math.round(progress.percentage)}% Complete
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Weight Chart */}
+      {weightHistory.length > 1 && (
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-blue-100">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="font-semibold text-gray-900">Weight Trend</h4>
+            <select
+              value={chartTimeframe}
+              onChange={(e) => setChartTimeframe(e.target.value as any)}
+              className="px-3 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm"
+            >
+              <option value="30">Last 30 days</option>
+              <option value="90">Last 3 months</option>
+              <option value="180">Last 6 months</option>
+              <option value="365">Last year</option>
+            </select>
+          </div>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={weightHistory}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="formattedDate" />
+                <YAxis 
+                  label={{ value: `Weight (${weightUnit})`, angle: -90, position: 'insideLeft' }}
+                />
+                <Tooltip 
+                  formatter={(value: number) => [formatWeight(value, weightUnit), 'Weight']}
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="weight" 
+                  stroke="#8b5cf6" 
+                  strokeWidth={2}
+                  name="Weight"
+                />
+                {activeGoal && (
+                  <Line 
+                    type="monotone" 
+                    dataKey={() => convertWeight(activeGoal.target_weight, 'lbs', weightUnit)}
+                    stroke="#ef4444" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    name="Target"
+                  />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          
+          {/* Progress Summary */}
+          {activeGoal && (() => {
+            const progress = calculateProgress(activeGoal);
+            const daysElapsed = differenceInDays(new Date(), new Date(activeGoal.start_date));
+            const daysToTarget = activeGoal.target_date ? differenceInDays(new Date(activeGoal.target_date), new Date()) : null;
+            
+            return (
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="text-center">
+                  <div className="font-medium text-gray-900">Progress</div>
+                  <div className={`text-lg font-bold ${progress.onTrack ? 'text-green-600' : 'text-yellow-600'}`}>
+                    {formatWeight(Math.abs(progress.progress), weightUnit)}
+                  </div>
+                  <div className="text-gray-500">
+                    {progress.onTrack ? '✓ On track' : '⚠ Behind schedule'}
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="font-medium text-gray-900">Time Elapsed</div>
+                  <div className="text-lg font-bold text-blue-600">{daysElapsed} days</div>
+                  <div className="text-gray-500">Since start</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-medium text-gray-900">Time Remaining</div>
+                  <div className="text-lg font-bold text-purple-600">
+                    {daysToTarget ? `${daysToTarget} days` : 'No target date'}
+                  </div>
+                  <div className="text-gray-500">To target</div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Recommendations */}
+      {activeGoal && (
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-blue-100">
+          <h4 className="font-semibold text-gray-900 mb-4">Personalized Recommendations</h4>
+          
+          {(() => {
+            const progress = calculateProgress(activeGoal);
+            const recommendations = getRecommendations(activeGoal, progress);
+            
+            return (
+              <div className="space-y-3">
+                {recommendations.map((rec, index) => (
+                  <div key={index} className="flex items-start space-x-3 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-purple-600 mt-0.5" />
+                    <p className="text-sm text-purple-800">{rec}</p>
+                  </div>
+                ))}
+                
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h5 className="font-medium text-blue-800 mb-2">Tips for Success:</h5>
+                  <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
+                    <li>Track your weight consistently at the same time of day</li>
+                    <li>Focus on overall health, not just the number on the scale</li>
+                    <li>Celebrate small victories and progress milestones</li>
+                    <li>Adjust your goal if needed - sustainable changes are key</li>
+                    <li>Consider consulting with a healthcare provider or nutritionist</li>
+                  </ul>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Create Goal Form */}
+      {showForm && (
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-blue-100">
+          <h4 className="font-semibold text-gray-900 mb-4">Create New Weight Goal</h4>
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Goal Type</label>
+                <select
+                  value={formData.goal_type}
+                  onChange={(e) => setFormData({...formData, goal_type: e.target.value as any})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="loss">Weight Loss</option>
+                  <option value="gain">Weight Gain</option>
+                  <option value="maintain">Maintain Weight</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Start Weight ({weightUnit})
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={formData.start_weight}
+                  onChange={(e) => setFormData({...formData, start_weight: Number(e.target.value)})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Target Weight ({weightUnit})
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={formData.target_weight}
+                  onChange={(e) => setFormData({...formData, target_weight: Number(e.target.value)})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Target Date</label>
+                <input
+                  type="date"
+                  value={formData.target_date}
+                  onChange={(e) => setFormData({...formData, target_date: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Weekly Goal ({weightUnit}/week)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={formData.weekly_goal}
+                  onChange={(e) => setFormData({...formData, weekly_goal: Number(e.target.value)})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  min="0.1"
+                  max="5"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Recommended: {getWeeklyGoalText()} for sustainable {formData.goal_type}
+                </p>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Notes & Strategy</label>
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({...formData, notes: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                rows={3}
+                placeholder="Your plan, motivation, or any notes about this goal..."
+              />
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                type="submit"
+                disabled={loading}
+                className="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+              >
+                {loading ? 'Creating...' : 'Create Goal'}
+              </button>
+              <button
+                type="button"
+                onClick={resetForm}
+                className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Goal History */}
+      <div className="bg-white rounded-xl shadow-sm border border-blue-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">Goal History</h3>
+        </div>
+        
+        {goals.length === 0 ? (
+          <div className="text-center py-12">
+            <Target className="h-12 w-12 text-purple-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No Weight Goals Yet</h3>
+            <p className="text-gray-600">Create your first weight goal to start tracking progress.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {goals.map((goal) => {
+              const GoalIcon = getGoalIcon(goal.goal_type);
+              const progress = calculateProgress(goal);
+              
+              return (
+                <div key={goal.id} className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <GoalIcon className="h-5 w-5 text-purple-600" />
+                        <span className="font-medium text-gray-900 capitalize">
+                          {goal.goal_type} Goal
+                        </span>
+                        {goal.is_active && (
+                          <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-800">
+                            Active
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600">
+                        <div>
+                          <span className="font-medium">Start:</span><br />
+                          {formatWeight(convertWeight(goal.start_weight, 'lbs', weightUnit), weightUnit)}
+                        </div>
+                        <div>
+                          <span className="font-medium">Target:</span><br />
+                          {formatWeight(convertWeight(goal.target_weight, 'lbs', weightUnit), weightUnit)}
+                        </div>
+                        <div>
+                          <span className="font-medium">Progress:</span><br />
+                          <span className={progress.progress !== 0 ? 'text-purple-600 font-medium' : ''}>
+                            {progress.progress > 0 ? '+' : ''}{formatWeight(Math.abs(progress.progress), weightUnit)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="font-medium">Status:</span><br />
+                          <span className={progress.onTrack ? 'text-green-600' : 'text-yellow-600'}>
+                            {Math.round(progress.percentage)}% ({progress.onTrack ? 'On track' : 'Behind'})
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {goal.notes && (
+                        <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                          <p className="text-sm text-gray-700">{goal.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
