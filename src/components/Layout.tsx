@@ -16,7 +16,8 @@ import {
   Flame,
   FileText,
   Target,
-  Bell
+  Bell,
+  Link
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -45,6 +46,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, title, currentPage, on
     { id: 'reports', label: 'Medical Reports', icon: FileText },
     { id: 'weight-goals', label: 'Weight Goals', icon: Target },
     { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'integrations', label: 'Integrations', icon: Link },
     { id: 'settings', label: 'Settings', icon: Settings },
     { id: 'data-management', label: 'Data Management', icon: Database },
   ];
