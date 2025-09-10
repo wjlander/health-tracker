@@ -69,6 +69,7 @@ export const Settings: React.FC = () => {
   const [saved, setSaved] = useState(false);
   const [apiSaving, setApiSaving] = useState(false);
   const [apiSaved, setApiSaved] = useState(false);
+  const [autoDetectedServices, setAutoDetectedServices] = useState<string[]>([]);
 
   useEffect(() => {
     if (currentUser?.tracking_preferences) {
@@ -131,6 +132,22 @@ export const Settings: React.FC = () => {
       };
       
       setApiConfig(autoDetectedConfig);
+      
+      // Detect which services have available credentials
+      const detectedServices = [];
+      if (autoDetectedConfig.supabase_url && autoDetectedConfig.supabase_anon_key) {
+        detectedServices.push('Supabase');
+      }
+      if (autoDetectedConfig.fitbit_client_id || autoDetectedConfig.fitbit_client_secret) {
+        detectedServices.push('Fitbit');
+      }
+      if (autoDetectedConfig.google_client_id || autoDetectedConfig.google_api_key) {
+        detectedServices.push('Google Calendar');
+      }
+      if (autoDetectedConfig.alexa_skill_id || autoDetectedConfig.alexa_client_id) {
+        detectedServices.push('Amazon Alexa');
+      }
+      setAutoDetectedServices(detectedServices);
       
       // Also save the auto-detected config for future use
       localStorage.setItem('api_configuration', JSON.stringify(autoDetectedConfig));
