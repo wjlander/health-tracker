@@ -112,9 +112,13 @@ export const Settings: React.FC = () => {
     } else {
       // Initialize with current environment variables (auto-detected from Replit secrets)
       const autoDetectedConfig = {
-        // Supabase - auto-detected from Replit secrets
-        supabase_url: import.meta.env.VITE_SUPABASE_ANON_KEY || '', // Fixed: this should be the URL
-        supabase_anon_key: import.meta.env.VITE_SUPABASE_URL || '', // Fixed: this should be the anon key
+        // Supabase - auto-detected from Replit secrets (corrected swapped values)
+        supabase_url: import.meta.env.VITE_SUPABASE_ANON_KEY?.startsWith('http') 
+          ? import.meta.env.VITE_SUPABASE_ANON_KEY 
+          : (import.meta.env.VITE_SUPABASE_URL?.startsWith('http') ? import.meta.env.VITE_SUPABASE_URL : '') || '',
+        supabase_anon_key: import.meta.env.VITE_SUPABASE_URL?.startsWith('eyJ') 
+          ? import.meta.env.VITE_SUPABASE_URL 
+          : (import.meta.env.VITE_SUPABASE_ANON_KEY?.startsWith('eyJ') ? import.meta.env.VITE_SUPABASE_ANON_KEY : '') || '',
         
         // Fitbit - auto-populated with default values for this app
         fitbit_client_id: import.meta.env.VITE_FITBIT_CLIENT_ID || '',
@@ -183,6 +187,25 @@ export const Settings: React.FC = () => {
 
   const updateApiConfig = (key: keyof ApiConfiguration, value: string) => {
     setApiConfig(prev => ({ ...prev, [key]: value }));
+  };
+
+  const validateApiConfig = () => {
+    const issues = [];
+    
+    // Validate Supabase
+    if (apiConfig.supabase_url && !apiConfig.supabase_url.startsWith('https://')) {
+      issues.push('Supabase URL must start with https://');
+    }
+    if (apiConfig.supabase_anon_key && !apiConfig.supabase_anon_key.startsWith('eyJ')) {
+      issues.push('Supabase Anon Key appears to be invalid (should start with eyJ)');
+    }
+    
+    // Validate Fitbit redirect URI
+    if (apiConfig.fitbit_redirect_uri && !apiConfig.fitbit_redirect_uri.startsWith('http')) {
+      issues.push('Fitbit Redirect URI must be a valid URL');
+    }
+    
+    return issues;
   };
 
   const handleApiSave = async () => {
@@ -445,6 +468,33 @@ export const Settings: React.FC = () => {
           description="Configure your Supabase and Fitbit API connection details"
           icon={<Database className="h-5 w-5 text-blue-600" />}
         >
+          {/* Auto-Detection Status */}
+          {autoDetectedServices.length > 0 && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <div className="flex items-center mb-2">
+                <Check className="h-5 w-5 text-green-600 mr-2" />
+                <h4 className="text-sm font-medium text-green-800">
+                  ✅ Auto-Detected Services
+                </h4>
+              </div>
+              <p className="text-sm text-green-700 mb-2">
+                The following services were automatically configured from your Replit environment:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {autoDetectedServices.map((service) => (
+                  <span 
+                    key={service}
+                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                  >
+                    {service}
+                  </span>
+                ))}
+              </div>
+              <p className="text-xs text-green-600 mt-2">
+                💡 These credentials were automatically populated from your environment variables. You can modify them below if needed.
+              </p>
+            </div>
+          )}
           <div className="space-y-6">
             <div className="border-b border-gray-200 pb-4">
               <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
