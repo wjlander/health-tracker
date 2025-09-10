@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, User, Bell, Shield, Palette, Globe, Save, Check, Key, Database } from 'lucide-react';
+import { Settings as SettingsIcon, User, Bell, Shield, Palette, Globe, Save, Check, Key, Database, Calendar, Mic } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { updateUserPreferences } from '../lib/database';
 import { WeightUnit, TemperatureUnit } from '../lib/units';
@@ -36,6 +36,11 @@ interface ApiConfiguration {
   fitbit_client_id: string;
   fitbit_client_secret: string;
   fitbit_redirect_uri: string;
+  google_client_id: string;
+  google_api_key: string;
+  alexa_skill_id: string;
+  alexa_client_id: string;
+  alexa_client_secret: string;
 }
 
 export const Settings: React.FC = () => {
@@ -53,7 +58,12 @@ export const Settings: React.FC = () => {
     supabase_anon_key: '',
     fitbit_client_id: '',
     fitbit_client_secret: '',
-    fitbit_redirect_uri: ''
+    fitbit_redirect_uri: '',
+    google_client_id: '',
+    google_api_key: '',
+    alexa_skill_id: '',
+    alexa_client_id: '',
+    alexa_client_secret: ''
   });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -105,7 +115,12 @@ export const Settings: React.FC = () => {
         supabase_anon_key: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
         fitbit_client_id: import.meta.env.VITE_FITBIT_CLIENT_ID || '',
         fitbit_client_secret: import.meta.env.VITE_FITBIT_CLIENT_SECRET || '',
-        fitbit_redirect_uri: import.meta.env.VITE_FITBIT_REDIRECT_URI || ''
+        fitbit_redirect_uri: import.meta.env.VITE_FITBIT_REDIRECT_URI || '',
+        google_client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+        google_api_key: import.meta.env.VITE_GOOGLE_API_KEY || '',
+        alexa_skill_id: import.meta.env.VITE_ALEXA_SKILL_ID || '',
+        alexa_client_id: import.meta.env.VITE_ALEXA_CLIENT_ID || '',
+        alexa_client_secret: import.meta.env.VITE_ALEXA_CLIENT_SECRET || ''
       });
     }
   }, [currentUser]);
@@ -455,6 +470,79 @@ export const Settings: React.FC = () => {
                   placeholder="https://your-domain.com/fitbit/callback"
                   type="url"
                 />
+              </div>
+            </div>
+            
+            <div className="border-b border-gray-200 pb-4">
+              <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Calendar className="h-5 w-5 mr-2 text-red-600" />
+                Google Calendar Configuration
+              </h4>
+              <div className="grid grid-cols-1 gap-4">
+                <Input
+                  label="Google Client ID"
+                  value={apiConfig.google_client_id}
+                  onChange={(value) => updateApiConfig('google_client_id', value)}
+                  placeholder="123456789-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com"
+                  required
+                />
+                <Input
+                  label="Google API Key"
+                  value={apiConfig.google_api_key}
+                  onChange={(value) => updateApiConfig('google_api_key', value)}
+                  placeholder="AIzaSyA..."
+                  type="password"
+                  required
+                />
+              </div>
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  📅 <strong>Setup Instructions:</strong> Create credentials at{' '}
+                  <a href="https://console.developers.google.com/" target="_blank" rel="noopener noreferrer" className="underline">
+                    Google Cloud Console
+                  </a>{' '}
+                  and enable the Calendar API for event and reminder management.
+                </p>
+              </div>
+            </div>
+            
+            <div className="border-b border-gray-200 pb-4">
+              <h4 className="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                <Mic className="h-5 w-5 mr-2 text-purple-600" />
+                Amazon Alexa Configuration
+              </h4>
+              <div className="grid grid-cols-1 gap-4">
+                <Input
+                  label="Alexa Skill ID"
+                  value={apiConfig.alexa_skill_id}
+                  onChange={(value) => updateApiConfig('alexa_skill_id', value)}
+                  placeholder="amzn1.ask.skill..."
+                  required
+                />
+                <Input
+                  label="Alexa Client ID"
+                  value={apiConfig.alexa_client_id}
+                  onChange={(value) => updateApiConfig('alexa_client_id', value)}
+                  placeholder="amzn1.application-oa2-client..."
+                  required
+                />
+                <Input
+                  label="Alexa Client Secret"
+                  value={apiConfig.alexa_client_secret}
+                  onChange={(value) => updateApiConfig('alexa_client_secret', value)}
+                  placeholder="Client secret from Alexa Developer Console"
+                  type="password"
+                  required
+                />
+              </div>
+              <div className="mt-3 p-3 bg-purple-50 rounded-lg">
+                <p className="text-sm text-purple-800">
+                  🎤 <strong>Setup Instructions:</strong> Create an Alexa Skill at{' '}
+                  <a href="https://developer.amazon.com/alexa/console/ask" target="_blank" rel="noopener noreferrer" className="underline">
+                    Alexa Developer Console
+                  </a>{' '}
+                  and enable reminders API for voice-activated health reminders and routines.
+                </p>
               </div>
             </div>
             
