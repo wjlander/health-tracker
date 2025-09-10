@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "DATABASE_URL=postgresql://postgres:password@helium/heliumdb?sslmode=disable node server/main.js",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
