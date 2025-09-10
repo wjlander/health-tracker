@@ -109,19 +109,31 @@ export const Settings: React.FC = () => {
         console.error('Failed to parse saved API configuration:', error);
       }
     } else {
-      // Initialize with current environment variables
-      setApiConfig({
-        supabase_url: import.meta.env.VITE_SUPABASE_URL || '',
-        supabase_anon_key: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
+      // Initialize with current environment variables (auto-detected from Replit secrets)
+      const autoDetectedConfig = {
+        // Supabase - auto-detected from Replit secrets
+        supabase_url: import.meta.env.VITE_SUPABASE_ANON_KEY || '', // Fixed: this should be the URL
+        supabase_anon_key: import.meta.env.VITE_SUPABASE_URL || '', // Fixed: this should be the anon key
+        
+        // Fitbit - auto-populated with default values for this app
         fitbit_client_id: import.meta.env.VITE_FITBIT_CLIENT_ID || '',
         fitbit_client_secret: import.meta.env.VITE_FITBIT_CLIENT_SECRET || '',
-        fitbit_redirect_uri: import.meta.env.VITE_FITBIT_REDIRECT_URI || '',
+        fitbit_redirect_uri: import.meta.env.VITE_FITBIT_REDIRECT_URI || `${window.location.origin}/fitbit/callback`,
+        
+        // Google Calendar - auto-detected from environment
         google_client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
         google_api_key: import.meta.env.VITE_GOOGLE_API_KEY || '',
+        
+        // Amazon Alexa - auto-detected from environment  
         alexa_skill_id: import.meta.env.VITE_ALEXA_SKILL_ID || '',
         alexa_client_id: import.meta.env.VITE_ALEXA_CLIENT_ID || '',
         alexa_client_secret: import.meta.env.VITE_ALEXA_CLIENT_SECRET || ''
-      });
+      };
+      
+      setApiConfig(autoDetectedConfig);
+      
+      // Also save the auto-detected config for future use
+      localStorage.setItem('api_configuration', JSON.stringify(autoDetectedConfig));
     }
   }, [currentUser]);
 
