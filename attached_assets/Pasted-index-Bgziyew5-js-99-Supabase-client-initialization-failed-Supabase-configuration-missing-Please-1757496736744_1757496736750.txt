@@ -1,0 +1,112 @@
+index-Bgziyew5.js:99 ❌ Supabase client initialization failed: Supabase configuration missing. Please check your .env file:
+- VITE_SUPABASE_URL should contain your Supabase project URL
+- VITE_SUPABASE_ANON_KEY should contain your Supabase anon key
+
+Current values:
+- VITE_SUPABASE_URL: undefined
+- VITE_SUPABASE_ANON_KEY: undefined
+
+Make sure to restart the development server after updating .env
+(anonymous) @ index-Bgziyew5.js:99
+index-Bgziyew5.js:437 🔗 Generating redirect URI: Object
+index-Bgziyew5.js:99 🔄 Found existing session, loading users...
+index-Bgziyew5.js:99 🔄 Loading users from database...
+index-Bgziyew5.js:99 ❌ Supabase not configured
+u @ index-Bgziyew5.js:99
+(anonymous) @ index-Bgziyew5.js:99
+(anonymous) @ index-Bgziyew5.js:99
+Ph @ index-Bgziyew5.js:40
+Is @ index-Bgziyew5.js:40
+(anonymous) @ index-Bgziyew5.js:40
+w @ index-Bgziyew5.js:25
+O @ index-Bgziyew5.js:25
+index-Bgziyew5.js:440 Loading dashboard data for user: Jayne 28e84517-d2fc-46f8-be07-b635b3cdd0c9
+index-Bgziyew5.js:432 Fetching health entries for user: 28e84517-d2fc-46f8-be07-b635b3cdd0c9
+index-Bgziyew5.js:432 Health entries query result: Object
+index-Bgziyew5.js:440 Raw dashboard data loaded: Object
+index-Bgziyew5.js:440 Health data for Jayne : Object
+index-Bgziyew5.js:440 Final dashboard state: Object
+index-Bgziyew5.js:432 Fetching health entries for user: 28e84517-d2fc-46f8-be07-b635b3cdd0c9
+index-Bgziyew5.js:432 Health entries query result: Object
+index-Bgziyew5.js:437 Error checking Fitbit connection: SyntaxError: Unexpected token '<', "<!doctype "... is not valid JSON
+g @ index-Bgziyew5.js:437
+retailer.js:2 No messages from Iterable
+retailer.js:2 Error fetching messages from Iterable No messages from Iterable
+index-Bgziyew5.js:99 👤 Switching to user: William 70f6f868-dc1c-45bb-b876-c6ebf2e79314
+index-Bgziyew5.js:432 Fetching health entries for user: 70f6f868-dc1c-45bb-b876-c6ebf2e79314
+index-Bgziyew5.js:440 Loading dashboard data for user: William 70f6f868-dc1c-45bb-b876-c6ebf2e79314
+index-Bgziyew5.js:432 Fetching health entries for user: 70f6f868-dc1c-45bb-b876-c6ebf2e79314
+index-Bgziyew5.js:432 Health entries query result: Object
+index-Bgziyew5.js:437 Error checking Fitbit connection: SyntaxError: Unexpected token '<', "<!doctype "... is not valid JSON
+g @ index-Bgziyew5.js:437
+index-Bgziyew5.js:432 Health entries query result: Object
+index-Bgziyew5.js:440 Raw dashboard data loaded: Object
+index-Bgziyew5.js:440 Health data for William : Object
+index-Bgziyew5.js:440 Final dashboard state: Object
+index-Bgziyew5.js:99 🔄 Creating backup for user: 70f6f868-dc1c-45bb-b876-c6ebf2e79314
+index-Bgziyew5.js:99 ❌ Backup creation failed: TypeError: Cannot read properties of null (reading 'from')
+    at r6.createBackup (index-Bgziyew5.js:99:24140)
+    at r6.createAutomaticBackup (index-Bgziyew5.js:99:32324)
+createBackup @ index-Bgziyew5.js:99
+createAutomaticBackup @ index-Bgziyew5.js:99
+index-Bgziyew5.js:99 ✅ Automatic daily backup created
+index-Bgziyew5.js:437 === FITBIT CONNECTION START ===
+index-Bgziyew5.js:437 🔗 Connecting Fitbit for user: William 70f6f868-dc1c-45bb-b876-c6ebf2e79314
+index-Bgziyew5.js:437 💾 Stored in session storage: Object
+index-Bgziyew5.js:437 🔗 Generating redirect URI: Object
+index-Bgziyew5.js:437 Generating Fitbit auth URL with: Object
+index-Bgziyew5.js:437 Error connecting to Fitbit: Error: Fitbit Client ID is not configured
+    at lue.getAuthUrl (index-Bgziyew5.js:437:5801)
+    at y (index-Bgziyew5.js:437:12936)
+    at Object.PM (index-Bgziyew5.js:37:9855)
+    at CM (index-Bgziyew5.js:37:10009)
+    at $M (index-Bgziyew5.js:37:10066)
+    at ww (index-Bgziyew5.js:37:31446)
+    at p2 (index-Bgziyew5.js:37:31863)
+    at index-Bgziyew5.js:37:36776
+    at Kv (index-Bgziyew5.js:40:36935)
+    at Fk (index-Bgziyew5.js:37:8991)
+y @ index-Bgziyew5.js:437
+PM @ index-Bgziyew5.js:37
+CM @ index-Bgziyew5.js:37
+$M @ index-Bgziyew5.js:37
+ww @ index-Bgziyew5.js:37
+p2 @ index-Bgziyew5.js:37
+(anonymous) @ index-Bgziyew5.js:37
+Kv @ index-Bgziyew5.js:40
+Fk @ index-Bgziyew5.js:37
+cm @ index-Bgziyew5.js:37
+_v @ index-Bgziyew5.js:37
+YM @ index-Bgziyew5.js:37
+index-Bgziyew5.js:440 Loading dashboard data for user: William 70f6f868-dc1c-45bb-b876-c6ebf2e79314
+index-Bgziyew5.js:432 Fetching health entries for user: 70f6f868-dc1c-45bb-b876-c6ebf2e79314
+index-Bgziyew5.js:432 Health entries query result: Object
+index-Bgziyew5.js:440 Raw dashboard data loaded: Object
+index-Bgziyew5.js:440 Health data for William : Object
+index-Bgziyew5.js:440 Final dashboard state: Object
+index-Bgziyew5.js:440 Loading dashboard data for user: William 70f6f868-dc1c-45bb-b876-c6ebf2e79314
+index-Bgziyew5.js:432 Fetching health entries for user: 70f6f868-dc1c-45bb-b876-c6ebf2e79314
+index-Bgziyew5.js:432 Health entries query result: Object
+index-Bgziyew5.js:440 Raw dashboard data loaded: Object
+index-Bgziyew5.js:440 Health data for William : Object
+index-Bgziyew5.js:440 Final dashboard state: Object
+index-Bgziyew5.js:432 Fetching health entries for user: 70f6f868-dc1c-45bb-b876-c6ebf2e79314
+index-Bgziyew5.js:432 Health entries query result: Object
+index-Bgziyew5.js:443 Error loading widget data: ReferenceError: getTotalWaterIntake is not defined
+    at w (index-Bgziyew5.js:443:20186)
+    at index-Bgziyew5.js:443:20093
+    at Ph (index-Bgziyew5.js:40:24272)
+    at Is (index-Bgziyew5.js:40:42382)
+    at d3 (index-Bgziyew5.js:40:41205)
+    at ia (index-Bgziyew5.js:40:40254)
+    at Jw (index-Bgziyew5.js:40:36864)
+    at Gi (index-Bgziyew5.js:38:3274)
+    at index-Bgziyew5.js:40:34246
+w @ index-Bgziyew5.js:443
+/api/health-entries:1  Failed to load resource: the server responded with a status of 404 (Not Found)
+index-Bgziyew5.js:443 Error saving entry: Error: Unknown error
+    at rr (index-Bgziyew5.js:432:31031)
+    at async GT (index-Bgziyew5.js:432:32261)
+    at async _ (index-Bgziyew5.js:443:21449)
+    at async index-Bgziyew5.js:440:63770
+_ @ index-Bgziyew5.js:443
